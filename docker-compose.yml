@@ -1,0 +1,13 @@
+services:
+  diagnostic:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: medcore-diagnostic
+    image: medcore-diagnostic
+    environment:
+      - PORT=3000
+    ports:
+      - '3004:3000'
+    env_file:
+      - .env
