@@ -79,6 +79,84 @@ class DiagnosticService {
       throw error;
     }
   }
+
+  async getDiagnosticsByPatientId(patientId: string) {
+    return await prisma.diagnostic.findMany({
+      where: { patientId },
+      include: { documents: true },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
+  async getDiagnosticDocumentsByPatientId(
+    patientId: string,
+    page: number = 1,
+    limit: number = 10
+  ) {
+    const skip = (page - 1) * limit;
+
+    const [diagnosticDocuments, total] = await Promise.all([
+      prisma.diagnosticDocument.findMany({
+        where: {
+          diagnostic: {
+            patientId,
+          },
+        },
+        skip,
+        take: limit,
+        orderBy: {
+          createdAt: 'desc',
+        },
+      }),
+      prisma.diagnosticDocument.count({
+        where: {
+          diagnostic: { patientId },
+        },
+      }),
+    ]);
+
+    return {
+      diagnosticDocuments,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async getFileById(fileId: string) {
+    return await prisma.diagnosticDocument.findUnique({
+      where: { id: fileId },
+    });
+  }
+
+  async deleteDocumentById(documentId: string) {
+    return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const document = await tx.diagnosticDocument.findUnique({
+        where: { id: documentId },
+      });
+
+      if (!document) {
+        throw new Error('Documento no encontrado');
+      }
+
+      try {
+        await fs.promises.unlink(document.filePath);
+      } catch (e) {
+        console.error(`Error al eliminar el archivo ${document.filePath}:`, e);
+      }
+
+      await tx.diagnosticDocument.delete({
+        where: { id: documentId },
+      });
+
+      return document;
+    });
+  }
 }
 
 export default new DiagnosticService();

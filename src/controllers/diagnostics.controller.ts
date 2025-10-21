@@ -68,6 +68,89 @@ const createDiagnostic = async (req: Request, res: Response) => {
   }
 };
 
+const getPatientDocuments = async (req: Request, res: Response) => {
+  try {
+    const { patientId } = req.params;
+
+    if (!patientId) {
+      res.status(400).json({
+        error: 'ID de paciente requerido',
+        message: 'Debe proporcionar un ID de paciente válido',
+      });
+      return;
+    }
+
+    const documents = await diagnosticService.getDiagnosticsByPatientId(
+      patientId
+    );
+
+    res.status(200).json({
+      message: 'Documentos del paciente obtenidos exitosamente',
+      data: documents,
+    });
+  } catch (error) {
+    console.error('Error obteniendo documentos del paciente:', error);
+    res
+      .status(500)
+      .json({ message: 'Error al obtener documentos del paciente' });
+  }
+};
+
+const downloadDocumentById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      res.status(400).json({
+        error: 'ID de documento requerido',
+        message: 'Debe proporcionar un ID de documento válido',
+      });
+      return;
+    }
+
+    const document = await diagnosticService.getFileById(id);
+
+    if (!document) {
+      res.status(404).json({
+        error: 'Documento no encontrado',
+        message: 'No se encontró un documento con el ID proporcionado',
+      });
+      return;
+    }
+
+    res.download(document.filePath, document.filename);
+  } catch (error) {
+    console.error('Error descargando documento:', error);
+    res.status(500).json({ message: 'Error al descargar documento' });
+  }
+};
+
+const deleteDocumentById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      res.status(400).json({
+        error: 'ID de documento requerido',
+        message: 'Debe proporcionar un ID de documento válido',
+      });
+      return;
+    }
+
+    await diagnosticService.deleteDocumentById(id);
+
+    res.status(200).json({
+      message: 'Documento eliminado exitosamente',
+    });
+  } catch (error) {
+    console.error('Error eliminando documento:', error);
+    res.status(500).json({ message: 'Error al eliminar documento' });
+  }
+};
+
 export default {
   createDiagnostic,
+  getPatientDocuments,
+  downloadDocumentById,
+  deleteDocumentById,
 };

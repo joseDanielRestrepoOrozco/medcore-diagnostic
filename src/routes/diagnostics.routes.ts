@@ -11,4 +11,22 @@ router.post(
   diagnosticsController.createDiagnostic
 );
 
+router.get(
+  '/documents/patient/:patientId',
+  requireRoles(['MEDICO', 'ADMINISTRADOR', 'ENFERMERA']),
+  diagnosticsController.getPatientDocuments
+);
+
+router.get(
+  '/documents/:id',
+  requireRoles(['MEDICO', 'ADMINISTRADOR', 'ENFERMERA']),
+  diagnosticsController.downloadDocumentById
+);
+
+router.delete(
+  '/documents/:id',
+  requireRoles(['MEDICO', 'ADMINISTRADOR']),
+  diagnosticsController.deleteDocumentById
+);
+
 export default router;
