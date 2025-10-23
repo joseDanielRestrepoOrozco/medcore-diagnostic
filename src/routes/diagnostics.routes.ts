@@ -11,6 +11,15 @@ router.post(
   diagnosticsController.createDiagnostic
 );
 
+// Permitir POST /api/v1/diagnostics con patientId en body (compat alias)
+router.post(
+  '/',
+  requireRoles(['MEDICO']),
+  (req, _res, next) => { if (!req.params) (req as any).params = {}; (req as any).params.patientId = String((req.body || {}).patientId || ''); next(); },
+  diagnosticUpload.multiple,
+  diagnosticsController.createDiagnostic
+);
+
 router.get(
   '/documents/patient/:patientId',
   requireRoles(['MEDICO', 'ADMINISTRADOR', 'ENFERMERA']),
@@ -28,5 +37,8 @@ router.delete(
   requireRoles(['MEDICO', 'ADMINISTRADOR']),
   diagnosticsController.deleteDocumentById
 );
+
+// GET /api/v1/diagnostics/search?patientId=&diagnostic=&dateFrom=&dateTo=
+router.get('/search', requireRoles(['MEDICO','ADMINISTRADOR','ENFERMERA']), diagnosticsController.search);
 
 export default router;

@@ -56,4 +56,11 @@ export const createUploader = (options: {
   storage: StorageEngine;
   limits?: multer.Options['limits'];
   fileFilter?: multer.Options['fileFilter'];
-}) => multer(options);
+}) => {
+  const limits = options.limits ?? { fileSize: 10 * 1024 * 1024 }; // 10MB
+  const defaultFilter: multer.Options['fileFilter'] = createFileFilter({
+    allowedExtensions: ['.pdf', '.jpg', '.jpeg', '.png'],
+    errorMessage: 'Solo se permiten PDF, JPG, JPEG o PNG',
+  });
+  return multer({ storage: options.storage, limits, fileFilter: options.fileFilter ?? defaultFilter });
+};

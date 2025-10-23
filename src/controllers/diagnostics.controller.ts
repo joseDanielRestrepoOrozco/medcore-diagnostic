@@ -1,6 +1,8 @@
 import { type Request, type Response } from 'express';
 import { DiagnosticData } from '../schemas/DiagnosticData.js';
 import diagnosticService from '../services/diagnostic.service.js';
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
 import { verifyPatientExists } from '../services/patient.service.js';
 
 const createDiagnostic = async (req: Request, res: Response) => {
@@ -153,4 +155,21 @@ export default {
   getPatientDocuments,
   downloadDocumentById,
   deleteDocumentById,
+  async search(req, res) {
+    try {
+      const { patientId, diagnostic, dateFrom, dateTo } = req.query as Record<string, string | undefined>;
+      const where: any = {};
+      if (patientId) where.patientId = patientId;
+      if (diagnostic) where.diagnosis = { contains: diagnostic, mode: 'insensitive' };
+      if (dateFrom || dateTo) {
+        where.diagnosticDate = {};
+        if (dateFrom) where.diagnosticDate.gte = new Date(dateFrom);
+        if (dateTo) where.diagnosticDate.lte = new Date(dateTo);
+      }
+      const list = await prisma.diagnostic.findMany({ where, orderBy: { diagnosticDate: 'desc' } });
+      res.json({ diagnostics: list });
+    } catch (e) {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  },
 };
