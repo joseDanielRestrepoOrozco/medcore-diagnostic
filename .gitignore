@@ -2,6 +2,8 @@ node_modules
 # Keep environment variables out of version control
 .env
 
+uploads
+
 /generated/prisma
 
 # Created by https://www.toptal.com/developers/gitignore/api/node,windows,macos,linux

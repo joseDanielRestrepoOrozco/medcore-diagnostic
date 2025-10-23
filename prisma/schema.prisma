@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,4 +5,47 @@ generator client {
 datasource db {
   provider = "mongodb"
   url      = env("DATABASE_URL")
+}
+
+enum DiagnosisState {
+  ACTIVE
+  ARCHIVED
+  DELETED
+}
+
+model Diagnostic {
+  id              String               @id @default(auto()) @map("_id") @db.ObjectId
+  patientId       String               @db.ObjectId
+  doctorId        String               @db.ObjectId
+  title           String
+  description     String
+  symptoms        String
+  diagnosis       String
+  treatment       String
+  observations    String?
+  diagnosticDate  DateTime             @default(now())
+  nextAppointment DateTime?
+  state           DiagnosisState       @default(ACTIVE) // ACTIVE, ARCHIVED, DELETED
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  documents       DiagnosticDocument[]
+}
+
+model DiagnosticDocument {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  diagnosticId   String   @db.ObjectId
+  filename       String
+  storedFilename String
+  filePath       String
+  fileType       String
+  mimeType       String
+  fileSize       Int
+  description    String?
+  uploadedBy     String   @db.ObjectId
+  createdAt      DateTime @default(now())
+
+  // relations
+  diagnostic Diagnostic @relation(fields: [diagnosticId], references: [id], onDelete: Cascade)
+
+  @@index([diagnosticId])
 }
