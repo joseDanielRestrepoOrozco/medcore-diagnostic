@@ -15,8 +15,8 @@ router.post(
 router.post(
   '/',
   requireRoles(['MEDICO']),
-  (req, _res, next) => { if (!req.params) (req as any).params = {}; (req as any).params.patientId = String((req.body || {}).patientId || ''); next(); },
   diagnosticUpload.multiple,
+  (req, _res, next) => { if (!(req as any).params) (req as any).params = {}; (req as any).params.patientId = String(((req as any).body || {}).patientId || ''); next(); },
   diagnosticsController.createDiagnostic
 );
 

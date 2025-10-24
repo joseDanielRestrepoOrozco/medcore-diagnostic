@@ -62,11 +62,11 @@ export async function verifyPatientExists(
       };
     }
 
-    const patientData = (await patientResponse.json()) as PatientData;
-
+    const raw = await patientResponse.json();
+    const patient = (raw && raw.patient) ? raw.patient : raw;
     return {
       success: true,
-      patient: patientData.patient,
+      patient,
     };
   } catch (error) {
     console.error('[verifyPatientExists] Error al verificar paciente:', error);

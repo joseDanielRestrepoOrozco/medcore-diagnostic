@@ -7,8 +7,8 @@ import { verifyPatientExists } from '../services/patient.service.js';
 
 const createDiagnostic = async (req: Request, res: Response) => {
   try {
-    const { patientId } = req.params;
     const files = req.files as Express.Multer.File[];
+    const patientId = (req.params as Record<string, string | undefined>).patientId || (req.body as Record<string, unknown> | undefined)?.patientId?.toString();
     const user = req.user;
     const authHeader = req.headers.authorization;
 
@@ -49,7 +49,7 @@ const createDiagnostic = async (req: Request, res: Response) => {
     const diagnosticData = DiagnosticData.parse(req.body);
 
     const diagnostic = await diagnosticService.createDiagnostic(
-      patientId,
+      String(patientId),
       user!.id,
       diagnosticData,
       files
@@ -150,6 +150,46 @@ const deleteDocumentById = async (req: Request, res: Response) => {
   }
 };
 
+// Subida de documentos (permite enviar solo archivos + patientId, con campos opcionales)
+const uploadDocuments = async (req: Request, res: Response) => {
+  try {
+    const files = req.files as Express.Multer.File[];
+    const patientId = (req.params as Record<string, string | undefined>).patientId || (req.body as Record<string, unknown> | undefined)?.patientId?.toString();
+    const user = req.user;
+    const authHeader = req.headers.authorization;
+
+    if (!patientId) {
+      res.status(400).json({ error: 'ID de paciente requerido', message: 'Debe proporcionar un ID de paciente válido' });
+      return;
+    }
+    // Verificar paciente activo
+    const patientVerification = await verifyPatientExists(String(patientId), authHeader!);
+    if (!patientVerification.success) {
+      res.status(patientVerification.error!.status).json({ error: patientVerification.error!.status === 404 ? 'Paciente no encontrado' : 'Error al verificar paciente', message: patientVerification.error!.message });
+      return;
+    }
+    if (patientVerification.patient!.state !== 'ACTIVE') {
+      res.status(400).json({ error: 'Paciente inactivo', message: 'No se puede crear un diagnóstico para un paciente inactivo' });
+      return;
+    }
+    const body = (req.body || {}) as Record<string, string>;
+    const diagnosticData = DiagnosticData.parse({
+      title: body.title || 'Adjunto',
+      description: body.description || '',
+      symptoms: body.symptoms || '',
+      diagnosis: body.diagnosis || '',
+      treatment: body.treatment || '',
+      observations: body.observations,
+      nextAppointment: body.nextAppointment ? new Date(body.nextAppointment) : undefined,
+    });
+    const diagnostic = await diagnosticService.createDiagnostic(String(patientId), user!.id, diagnosticData, files);
+    res.status(201).json({ message: 'Documentos subidos', data: diagnostic });
+  } catch (error) {
+    console.error('Error subiendo documentos:', error);
+    if (error instanceof Error) res.status(400).json({ message: error.message || 'Error al subir documentos' });
+  }
+};
+
 export default {
   createDiagnostic,
   getPatientDocuments,
@@ -172,4 +212,5 @@ export default {
       res.status(500).json({ error: 'Internal server error' });
     }
   },
+  uploadDocuments,
 };

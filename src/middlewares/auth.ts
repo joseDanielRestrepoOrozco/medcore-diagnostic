@@ -5,7 +5,11 @@ import { userSchema } from '../types/User.js';
 export const requireRoles = (allowedRoles: string[]) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const authHeader = req.headers.authorization;
+      let authHeader = req.headers.authorization;
+      // Permitir token vía query (para descargas/visor en <object>/<iframe>)
+      if (!authHeader && typeof req.query.token === 'string' && req.query.token) {
+        authHeader = `Bearer ${req.query.token}`;
+      }
 
       if (!authHeader) {
         res.status(401).json({ error: 'No token provided' });

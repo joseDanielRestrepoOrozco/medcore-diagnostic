@@ -11,7 +11,16 @@ router.post(
   '/upload/:patientId',
   requireRoles(['MEDICO','ADMINISTRADOR']),
   diagnosticUpload.multiple,
-  diagnosticsController.createDiagnostic
+  diagnosticsController.uploadDocuments
+);
+
+// Alias: POST /api/v1/documents/upload con patientId en el body
+router.post(
+  '/upload',
+  requireRoles(['MEDICO','ADMINISTRADOR']),
+  diagnosticUpload.multiple,
+  (req, _res, next) => { if (!(req as any).params) (req as any).params = {}; (req as any).params.patientId = String((req.body || {}).patientId || ''); next(); },
+  diagnosticsController.uploadDocuments
 );
 
 // GET /api/v1/documents/patient/:patientId → documentos por paciente
