@@ -35,8 +35,10 @@ const createDiagnostic = async (req: Request, res: Response) => {
       return;
     }
 
+    console.log(patientVerification);
+
     // Validar que el paciente esté activo
-    if (patientVerification.patient!.state !== 'ACTIVE') {
+    if (patientVerification.patient!.status !== 'ACTIVE') {
       res.status(400).json({
         error: 'Paciente inactivo',
         message: 'No se puede crear un diagnóstico para un paciente inactivo',
