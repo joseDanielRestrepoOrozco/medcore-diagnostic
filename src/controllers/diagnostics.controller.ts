@@ -1,5 +1,8 @@
 import { type Request, type Response } from 'express';
-import { DiagnosticData } from '../schemas/DiagnosticData.js';
+import {
+  DiagnosticData,
+  DiagnosticDataUpdate,
+} from '../schemas/DiagnosticData.js';
 import diagnosticService from '../services/diagnostic.service.js';
 import { verifyPatientExists } from '../services/patient.service.js';
 
@@ -34,8 +37,6 @@ const createDiagnostic = async (req: Request, res: Response) => {
       });
       return;
     }
-
-    console.log(patientVerification);
 
     // Validar que el paciente esté activo
     if (patientVerification.patient!.status !== 'ACTIVE') {
@@ -73,6 +74,8 @@ const createDiagnostic = async (req: Request, res: Response) => {
 const getPatientDocuments = async (req: Request, res: Response) => {
   try {
     const { patientId } = req.params;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
 
     if (!patientId) {
       res.status(400).json({
@@ -82,19 +85,225 @@ const getPatientDocuments = async (req: Request, res: Response) => {
       return;
     }
 
-    const documents = await diagnosticService.getDiagnosticsByPatientId(
-      patientId
+    // Validar que page y limit sean números positivos
+    if (page < 1 || limit < 1) {
+      res.status(400).json({
+        error: 'Parámetros de paginación inválidos',
+        message: 'Los parámetros page y limit deben ser números positivos',
+      });
+      return;
+    }
+
+    // Limitar el límite máximo a 100 para evitar sobrecarga
+    const validatedLimit = Math.min(limit, 100);
+
+    const result = await diagnosticService.getDiagnosticsByPatientId(
+      patientId,
+      page,
+      validatedLimit
     );
 
     res.status(200).json({
       message: 'Documentos del paciente obtenidos exitosamente',
-      data: documents,
+      data: result.diagnostics,
+      pagination: result.pagination,
     });
   } catch (error) {
     console.error('Error obteniendo documentos del paciente:', error);
     res
       .status(500)
       .json({ message: 'Error al obtener documentos del paciente' });
+  }
+};
+
+const getDiagnosticById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      res.status(400).json({
+        error: 'ID de diagnóstico requerido',
+        message: 'Debe proporcionar un ID de diagnóstico válido',
+      });
+      return;
+    }
+
+    const diagnostic = await diagnosticService.getDiagnosticById(id);
+
+    if (!diagnostic) {
+      res.status(404).json({
+        error: 'Diagnóstico no encontrado',
+        message: 'No se encontró un diagnóstico con el ID proporcionado',
+      });
+      return;
+    }
+
+    res.status(200).json({
+      message: 'Diagnóstico obtenido exitosamente',
+      data: diagnostic,
+    });
+  } catch (error) {
+    console.error('Error obteniendo diagnóstico:', error);
+    res.status(500).json({ message: 'Error al obtener diagnóstico' });
+  }
+};
+
+const updateDiagnostic = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      res.status(400).json({
+        error: 'ID de diagnóstico requerido',
+        message: 'Debe proporcionar un ID de diagnóstico válido',
+      });
+      return;
+    }
+
+    // Verificar que el diagnóstico exista
+    const existingDiagnostic = await diagnosticService.getDiagnosticById(id);
+
+    if (!existingDiagnostic) {
+      res.status(404).json({
+        error: 'Diagnóstico no encontrado',
+        message: 'No se encontró un diagnóstico con el ID proporcionado',
+      });
+      return;
+    }
+
+    // Validar los datos del diagnóstico
+    const diagnosticData = DiagnosticDataUpdate.parse(req.body);
+
+    // Actualizar el diagnóstico
+    const updatedDiagnostic = await diagnosticService.updateDiagnostic(
+      id,
+      diagnosticData
+    );
+
+    res.status(200).json({
+      message: 'Diagnóstico actualizado exitosamente',
+      data: updatedDiagnostic,
+    });
+  } catch (error) {
+    console.error('Error actualizando diagnóstico:', error);
+    if (error instanceof Error) {
+      res.status(400).json({
+        message: error.message || 'Error al actualizar diagnóstico',
+      });
+    } else {
+      res.status(500).json({ message: 'Error al actualizar diagnóstico' });
+    }
+  }
+};
+
+const addDocumentsToDiagnostic = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const files = req.files as Express.Multer.File[];
+    const user = req.user;
+
+    if (!id) {
+      res.status(400).json({
+        error: 'ID de diagnóstico requerido',
+        message: 'Debe proporcionar un ID de diagnóstico válido',
+      });
+      return;
+    }
+
+    if (!files || files.length === 0) {
+      res.status(400).json({
+        error: 'Archivos requeridos',
+        message: 'Debe proporcionar al menos un archivo',
+      });
+      return;
+    }
+
+    // Verificar que el diagnóstico exista
+    const existingDiagnostic = await diagnosticService.getDiagnosticById(id);
+
+    if (!existingDiagnostic) {
+      res.status(404).json({
+        error: 'Diagnóstico no encontrado',
+        message: 'No se encontró un diagnóstico con el ID proporcionado',
+      });
+      return;
+    }
+
+    // Agregar los documentos
+    const updatedDiagnostic = await diagnosticService.addDocumentsToDiagnostic(
+      id,
+      user!.id,
+      files
+    );
+
+    res.status(200).json({
+      message: 'Documentos agregados exitosamente',
+      data: updatedDiagnostic,
+    });
+  } catch (error) {
+    console.error('Error agregando documentos:', error);
+    if (error instanceof Error) {
+      res.status(400).json({
+        message: error.message || 'Error al agregar documentos',
+      });
+    } else {
+      res.status(500).json({ message: 'Error al agregar documentos' });
+    }
+  }
+};
+
+const getMyMedicalHistory = async (req: Request, res: Response) => {
+  try {
+    const user = req.user;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+
+    if (!user) {
+      res.status(401).json({
+        error: 'No autenticado',
+        message: 'No se pudo obtener información del usuario',
+      });
+      return;
+    }
+
+    // Verificar que el usuario sea un paciente
+    if (user.role !== 'PACIENTE') {
+      res.status(403).json({
+        error: 'Acceso denegado',
+        message: 'Solo los pacientes pueden acceder a su historia clínica',
+      });
+      return;
+    }
+
+    // Validar que page y limit sean números positivos
+    if (page < 1 || limit < 1) {
+      res.status(400).json({
+        error: 'Parámetros de paginación inválidos',
+        message: 'Los parámetros page y limit deben ser números positivos',
+      });
+      return;
+    }
+
+    // Limitar el límite máximo a 100 para evitar sobrecarga
+    const validatedLimit = Math.min(limit, 100);
+
+    // Obtener el ID del paciente desde el usuario autenticado
+    const patientId = user.id;
+
+    const result = await diagnosticService.getDiagnosticsByPatientId(
+      patientId,
+      page,
+      validatedLimit
+    );
+
+    res.status(200).json({
+      message: 'Historia clínica obtenida exitosamente',
+      data: result.diagnostics,
+      pagination: result.pagination,
+    });
+  } catch (error) {
+    console.error('Error obteniendo historia clínica:', error);
+    res.status(500).json({ message: 'Error al obtener historia clínica' });
   }
 };
 
@@ -153,6 +362,10 @@ const deleteDocumentById = async (req: Request, res: Response) => {
 export default {
   createDiagnostic,
   getPatientDocuments,
+  getDiagnosticById,
+  updateDiagnostic,
+  addDocumentsToDiagnostic,
+  getMyMedicalHistory,
   downloadDocumentById,
   deleteDocumentById,
 };

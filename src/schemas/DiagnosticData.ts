@@ -10,4 +10,8 @@ export const DiagnosticData = z.object({
   nextAppointment: z.date().optional(),
 });
 
+export const DiagnosticDataUpdate = DiagnosticData.partial();
+
+export type DiagnosticDataUpdateType = z.infer<typeof DiagnosticDataUpdate>;
+
 export type DiagnosticDataType = z.infer<typeof DiagnosticData>;
