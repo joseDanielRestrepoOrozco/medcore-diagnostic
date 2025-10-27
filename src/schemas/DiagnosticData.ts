@@ -7,7 +7,7 @@ export const DiagnosticData = z.object({
   diagnosis: z.string(),
   treatment: z.string(),
   observations: z.string().optional(),
-  nextAppointment: z.date().optional(),
+  nextAppointment: z.coerce.date().optional(),
 });
 
 export const DiagnosticDataUpdate = DiagnosticData.partial();
