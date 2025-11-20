@@ -1,4 +1,4 @@
-import { PATIENTS_SERVICE_URL } from '../libs/config.js';
+import { USERS_SERVICE_URL } from '../libs/config.js';
 
 interface PatientData {
   patient: {
@@ -7,7 +7,7 @@ interface PatientData {
     documentNumber: string;
     gender: string;
     address?: string;
-    state: string;
+    status: string;
     createdAt: string;
     updatedAt: string;
   };
@@ -31,7 +31,7 @@ export async function verifyPatientExists(
 ): Promise<VerifyPatientResult> {
   try {
     const patientResponse = await fetch(
-      `${PATIENTS_SERVICE_URL}/api/v1/patients/${patientId}`,
+      `${USERS_SERVICE_URL}/api/v1/users/patients/${patientId}`,
       {
         method: 'GET',
         headers: {
